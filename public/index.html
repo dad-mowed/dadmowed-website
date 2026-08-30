@@ -290,6 +290,9 @@
   .gallery-tile.c2{background:var(--sky);}
   .gallery-tile.c3{background:var(--grass);}
   .gallery-tile.c4{background:#F3C98A;}
+  .gallery-tile.photo{cursor:pointer;}
+  .gallery-tile.photo:hover{filter:brightness(1.06);}
+  .gallery-tile.photo:focus-visible{outline:3px solid var(--sky-deep); outline-offset:3px;}
   .gallery-note{
     margin-top:18px;
     font-size:0.88rem;
@@ -589,6 +592,70 @@
     .joke-modal-actions{flex-direction:column;}
     .joke-modal-actions .btn{width:100%;}
   }
+
+  /* ---------- Gallery lightbox ---------- */
+  .gallery-lightbox{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(46,36,23,0.88);
+    z-index:110;
+    align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .gallery-lightbox.show{display:flex;}
+  .gallery-lightbox-frame{
+    position:relative;
+    max-width:min(900px, 92vw);
+    max-height:88vh;
+    transform:scale(0.92);
+    opacity:0;
+    animation:jokeModalIn .22s ease forwards;
+  }
+  .gallery-lightbox-frame img{
+    display:block;
+    max-width:min(900px, 92vw);
+    max-height:88vh;
+    width:auto; height:auto;
+    border:4px solid var(--cream);
+    border-radius:14px;
+    box-shadow:6px 6px 0 rgba(0,0,0,0.4);
+    background:var(--ink);
+  }
+  .lightbox-close{
+    position:absolute; top:-18px; right:-18px;
+    width:40px; height:40px;
+    border-radius:50%;
+    background:var(--sun);
+    border:3px solid var(--ink);
+    color:var(--ink);
+    font-size:1.3rem;
+    font-weight:800;
+    line-height:1;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:3px 3px 0 var(--ink);
+  }
+  .lightbox-nav{
+    position:fixed;
+    top:50%; transform:translateY(-50%);
+    width:52px; height:52px;
+    border-radius:50%;
+    background:var(--cream);
+    border:3px solid var(--ink);
+    color:var(--ink);
+    font-size:1.3rem;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:3px 3px 0 var(--ink);
+  }
+  .lightbox-prev{left:24px;}
+  .lightbox-next{right:24px;}
+  @media (max-width:640px){
+    .lightbox-close{top:-14px; right:-14px; width:34px; height:34px; font-size:1.1rem;}
+    .lightbox-nav{width:42px; height:42px; font-size:1.05rem;}
+    .lightbox-prev{left:8px;}
+    .lightbox-next{right:8px;}
+  }
 </style>
 </head>
 <body>
@@ -707,6 +774,16 @@
     </div>
   </div>
 </section>
+
+<!-- Gallery lightbox: expands a clicked photo, with prev/next between all tiles -->
+<div id="galleryLightbox" class="gallery-lightbox" aria-hidden="true">
+  <button type="button" class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Previous photo">&#10094;</button>
+  <div class="gallery-lightbox-frame">
+    <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+    <img id="lightboxImg" src="" alt="Enlarged gallery photo">
+  </div>
+  <button type="button" class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Next photo">&#10095;</button>
+</div>
 
 <span class="grass-divider" aria-hidden="true">
 <svg viewBox="0 0 1200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
@@ -1124,6 +1201,65 @@
   });
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape' && jokeModal.classList.contains('show')) closeJokeModal();
+  });
+
+  // ── Gallery lightbox ─────────────────────────────────────────────────
+  // Reuses each tile's existing background-image (no duplicating those
+  // large embedded photos anywhere else in the file).
+  const galleryTiles = Array.from(document.querySelectorAll('.gallery-tile.photo'));
+  const galleryUrls = galleryTiles.map(function(tile){
+    const bg = tile.style.backgroundImage; // e.g. url("data:image/jpeg;base64,...")
+    const match = bg.match(/^url\(["']?(.*?)["']?\)$/);
+    return match ? match[1] : '';
+  });
+
+  const lightbox = document.getElementById('galleryLightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+  const lightboxClose = document.getElementById('lightboxClose');
+  const lightboxPrev = document.getElementById('lightboxPrev');
+  const lightboxNext = document.getElementById('lightboxNext');
+  let currentPhotoIndex = 0;
+
+  function showPhoto(index){
+    currentPhotoIndex = (index + galleryUrls.length) % galleryUrls.length;
+    lightboxImg.src = galleryUrls[currentPhotoIndex];
+  }
+
+  function openLightbox(index){
+    showPhoto(index);
+    lightbox.classList.add('show');
+    lightbox.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeLightbox(){
+    lightbox.classList.remove('show');
+    lightbox.setAttribute('aria-hidden', 'true');
+  }
+
+  galleryTiles.forEach(function(tile, index){
+    tile.setAttribute('tabindex', '0');
+    tile.setAttribute('role', 'button');
+    tile.setAttribute('aria-label', 'View photo ' + (index + 1) + ' enlarged');
+    tile.addEventListener('click', function(){ openLightbox(index); });
+    tile.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        openLightbox(index);
+      }
+    });
+  });
+
+  lightboxClose.addEventListener('click', closeLightbox);
+  lightboxPrev.addEventListener('click', function(){ showPhoto(currentPhotoIndex - 1); });
+  lightboxNext.addEventListener('click', function(){ showPhoto(currentPhotoIndex + 1); });
+  lightbox.addEventListener('click', function(e){
+    if (e.target === lightbox) closeLightbox(); // click on the dark backdrop
+  });
+  document.addEventListener('keydown', function(e){
+    if (!lightbox.classList.contains('show')) return;
+    if (e.key === 'Escape') closeLightbox();
+    else if (e.key === 'ArrowLeft') showPhoto(currentPhotoIndex - 1);
+    else if (e.key === 'ArrowRight') showPhoto(currentPhotoIndex + 1);
   });
 </script>
 
