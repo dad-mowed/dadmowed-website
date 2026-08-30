@@ -523,6 +523,68 @@
     .footer-grid{grid-template-columns:1fr;}
     .form-row{grid-template-columns:1fr;}
   }
+
+  /* ---------- Post-submission dad-joke popup ---------- */
+  .joke-modal{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(46,36,23,0.55);
+    z-index:100;
+    align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .joke-modal.show{display:flex;}
+  .joke-modal-card{
+    max-width:440px;
+    width:100%;
+    padding:32px 28px;
+    text-align:center;
+    transform:scale(0.9) translateY(10px);
+    opacity:0;
+    animation:jokeModalIn .28s ease forwards;
+  }
+  @keyframes jokeModalIn{
+    to{transform:scale(1) translateY(0); opacity:1;}
+  }
+  .joke-modal-eyebrow{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:800;
+    font-size:1.15rem;
+    color:var(--grass-deep);
+    margin:0 0 6px;
+  }
+  .joke-modal-card h3{
+    font-family:'Baloo 2', sans-serif;
+    font-size:1.5rem;
+    color:var(--sky-deep);
+    margin:0 0 6px;
+  }
+  .joke-modal-sub{
+    margin:0 0 18px;
+    font-size:0.96rem;
+    color:var(--ink);
+  }
+  .joke-modal-joke{
+    background:var(--cream);
+    border:3px solid var(--ink);
+    border-radius:var(--radius);
+    box-shadow:4px 4px 0 var(--ink);
+    padding:18px 16px;
+    font-weight:700;
+    font-size:1.02rem;
+    line-height:1.45;
+    margin:0 0 22px;
+    min-height:64px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .joke-modal-actions{
+    display:flex; flex-wrap:wrap; gap:12px; justify-content:center;
+  }
+  @media (max-width:480px){
+    .joke-modal-card{padding:26px 20px;}
+    .joke-modal-actions{flex-direction:column;}
+    .joke-modal-actions .btn{width:100%;}
+  }
 </style>
 </head>
 <body>
@@ -720,6 +782,20 @@
     </div>
   </div>
 </section>
+
+<!-- Post-submission "thank you + dad joke" popup -->
+<div id="jokeModal" class="joke-modal" aria-hidden="true">
+  <div class="joke-modal-card sticker" role="dialog" aria-modal="true" aria-labelledby="jokeModalTitle">
+    <p class="joke-modal-eyebrow">🌱 Quote Request Sent!</p>
+    <h3 id="jokeModalTitle">Thanks for choosing Dad Mowed!</h3>
+    <p class="joke-modal-sub">We'll be in touch soon. In the meantime...</p>
+    <p class="joke-modal-joke" id="jokeModalJoke"></p>
+    <div class="joke-modal-actions">
+      <button type="button" class="btn btn-sky" id="jokeModalAnother">Another One 😂</button>
+      <button type="button" class="btn btn-ghost" id="jokeModalClose">Done</button>
+    </div>
+  </div>
+</div>
 
 <section id="reviews">
   <div class="wrap">
@@ -978,10 +1054,72 @@
       formStatus.textContent = "Thanks! We'll reach out within 24 hours to confirm your quote.";
       formStatus.classList.add('show');
       quoteForm.reset();
+      openJokeModal();
     }).catch(function(){
       formStatus.textContent = "Something went wrong sending that — please call or email us directly.";
       formStatus.classList.add('show');
     });
+  });
+
+  // ── Post-submission dad-joke popup ──────────────────────────────────
+  // Add or edit jokes freely — just keep each one a plain quoted string
+  // in this array.
+  const DAD_JOKES = [
+    "What do you call a lawn mower that's having a bad day? A little edgy.",
+    "Why did the grass get promoted? Because it was always growing in its career.",
+    "What did the dad say when he finished mowing the lawn? \"That was a cut above the rest.\"",
+    "Why don't lawns ever get invited to parties? They're always getting cut short.",
+    "What's a lawn's favorite subject in school? Growth-metry.",
+    "Why did the gardener plant lightbulbs? He wanted to grow a power plant.",
+    "What do you call a dad who's really into mulch? A mulch-tasker.",
+    "Why was the rake so good at its job? It really knew how to gather itself.",
+    "What did the tree say to the arborist? Leaf me alone, I'm branching out.",
+    "Why did the hedge go to therapy? It had trouble with boundaries.",
+    "What's a lawn mower's favorite genre of music? Anything with a good edge to it.",
+    "Why do dads make the best lawn care experts? They've mastered the dad-grees of mowing.",
+    "What did one blade of grass say to another? Stay sharp out there.",
+    "Why did the sprinkler get promoted? It always rose to the occasion.",
+    "What do you call a perfectly mowed lawn? A dad's magnum opus.",
+    "Why did the weed apologize? It knew it had overstepped.",
+    "What's a dad's favorite kind of joke while mowing? One with good delivery and a clean cut."
+  ];
+
+  const jokeModal = document.getElementById('jokeModal');
+  const jokeModalJoke = document.getElementById('jokeModalJoke');
+  const jokeModalAnother = document.getElementById('jokeModalAnother');
+  const jokeModalClose = document.getElementById('jokeModalClose');
+  let lastJokeIndex = -1;
+
+  function pickRandomJoke(){
+    if (DAD_JOKES.length === 1) return DAD_JOKES[0];
+    let index;
+    do {
+      index = Math.floor(Math.random() * DAD_JOKES.length);
+    } while (index === lastJokeIndex);
+    lastJokeIndex = index;
+    return DAD_JOKES[index];
+  }
+
+  function openJokeModal(){
+    jokeModalJoke.textContent = pickRandomJoke();
+    jokeModal.classList.add('show');
+    jokeModal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeJokeModal(){
+    jokeModal.classList.remove('show');
+    jokeModal.setAttribute('aria-hidden', 'true');
+  }
+
+  jokeModalAnother.addEventListener('click', function(){
+    jokeModalJoke.textContent = pickRandomJoke();
+  });
+  jokeModalClose.addEventListener('click', closeJokeModal);
+  jokeModal.addEventListener('click', function(e){
+    if (e.target === jokeModal) closeJokeModal(); // click on the dark backdrop
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && jokeModal.classList.contains('show')) closeJokeModal();
   });
 </script>
 
